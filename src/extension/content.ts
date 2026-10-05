@@ -1,10 +1,9 @@
 import { MAX_CHARACTERS, type CorrectionEdit } from '../core/types';
 import { isTextArea, replaceRange, snapshot, textRange, type EditorElement } from './dom';
 import { runtimeMessage, type Message, type PublicSettings, type Reply } from './protocol';
-import policy from '../core/policy.json';
 
 type Send = (message: Message) => Promise<Reply>;
-interface RecordEdit { edit: CorrectionEdit; start: number; end: number; current: string; applied: boolean }
+interface RecordEdit { edit: CorrectionEdit; start: number; end: number; current: string; applied: boolean; stale: boolean; reviewId?: string }
 interface ControllerOptions { send?: Send; debounceMs?: number }
 const signature = (edit: CorrectionEdit) => `${edit.original}\u0000${edit.replacement}`;
 const overlayStyle = `
@@ -48,6 +47,8 @@ export function createController(editor: EditorElement, options: ControllerOptio
   let menu: HTMLElement | undefined;
   let activeRecord: RecordEdit | undefined;
   const suppressed = new Set<string>();
+  const checkedSnapshots = new Set<string>();
+  let feedbackQueue: Promise<void> = Promise.resolve();
   let raf = 0;
 
   function label(text: string) { badge.textContent = text; badge.title = `${text}（Alt + ↓ 查看建議）`; announcement.textContent = text; }
@@ -56,7 +57,7 @@ export function createController(editor: EditorElement, options: ControllerOptio
     if (!settings.configured) label('順字 · 尚未連線');
     else if (!settings.enabled) label('順字 · 已暫停');
     else if (records.length) label(`順字 · ${records.length} 處可檢查`);
-    else label(policy.autoCategories.length ? '順字' : '順字 · 建議試驗');
+    else label('順字 · 建議模式');
   }
   function closeMenu(focus = false) {
     menu?.remove(); menu = undefined; activeRecord = undefined;
@@ -109,8 +110,19 @@ export function createController(editor: EditorElement, options: ControllerOptio
   }
   function requestRender() { if (!raf) raf = requestAnimationFrame(() => { raf = 0; render(); }); }
 
+  function feedback(record: RecordEdit, text: string, action: 'accept' | 'keep' | 'restore') {
+    if (!record.reviewId) return;
+    const eventId = Array.from(crypto.getRandomValues(new Uint32Array(4)), n => n.toString(16)).join('-');
+    const message: Message = { type:'shunzi:feedback',reviewId:record.reviewId,editId:record.edit.id,text,action,eventId };
+    feedbackQueue = feedbackQueue.then(async()=> {
+      if (destroyed || location.href !== pageHref) return;
+      const reply = await send(message);
+      if (!destroyed && reply.ok && 'settings' in reply) settings = reply.settings;
+    }).catch(()=>{});
+  }
+
   function change(record: RecordEdit, replacement: string, restore = false) {
-    if (composing || destroyed || location.href !== pageHref || snapshot(editor).text.slice(record.start, record.end) !== record.current) { closeMenu(); return; }
+    if (composing || destroyed || !records.includes(record) || (record.stale && !restore) || location.href !== pageHref || snapshot(editor).text.slice(record.start, record.end) !== record.current) { closeMenu(); return; }
     generation++; clearTimeout(timer);
     applying = true;
     const previousEnd = record.end;
@@ -124,6 +136,8 @@ export function createController(editor: EditorElement, options: ControllerOptio
     for (const other of records) if (other !== record && other.start >= previousEnd) { other.start += shift; other.end += shift; }
     record.current = replacement; record.end = record.start + replacement.length; record.applied = replacement !== record.edit.original;
     lastText = snapshot(editor).text;
+    checkedSnapshots.add(lastText);
+    feedback(record, replacement, restore ? 'restore' : 'accept');
     if (restore) {
       suppressed.add(signature(record.edit)); records = records.filter(item => item !== record);
     }
@@ -133,19 +147,19 @@ export function createController(editor: EditorElement, options: ControllerOptio
     if (composing || !records.includes(record)) return;
     closeMenu(); activeRecord = record;
     menu = document.createElement('section'); menu.className = 'menu'; menu.setAttribute('role', 'dialog'); menu.setAttribute('aria-label', '順字校對建議');
-    const heading = document.createElement('h2'); heading.textContent = record.applied ? '已調整 · 仍可還原' : '有一個地方可以看看';
+    const heading = document.createElement('h2'); heading.textContent = record.stale ? '上下文已變更 · 僅可還原' : record.applied ? '已調整 · 仍可還原' : '有一個地方可以看看';
     const comparison = document.createElement('p');
     const from = document.createElement('span'); from.className = 'from'; from.textContent = record.edit.original;
-    const to = document.createElement('span'); to.className = 'to'; to.textContent = record.edit.replacement;
+    const to = document.createElement('span'); to.className = 'to'; to.textContent = record.applied ? record.current : record.edit.replacement;
     comparison.append(from, document.createTextNode(' → '), to);
-    const reason = document.createElement('p'); reason.textContent = record.edit.reason;
+    const reason = document.createElement('p'); reason.textContent = record.stale ? '文字已續寫，舊候選不再適用。你仍可還原先前的修改。' : record.edit.reason;
     const choices = document.createElement('div'); choices.className = 'choices';
-    for (const candidate of [...new Set([record.edit.replacement, ...record.edit.alternatives])]) {
+    for (const candidate of record.stale ? [] : [...new Set([record.edit.replacement, ...record.edit.alternatives])].slice(0,3)) {
       if (candidate !== record.current) choices.append(makeButton(candidate, () => change(record, candidate)));
     }
     const actions = document.createElement('div'); actions.className = 'actions';
     actions.append(makeButton(record.applied ? '還原原文' : '保留原文', () => record.applied ? change(record, record.edit.original, true) : dismiss(record)));
-    actions.append(makeButton('記住原詞', () => { void remember(record); }));
+    if (!record.stale) actions.append(makeButton('記住原詞', () => { void remember(record); }));
     const hint = document.createElement('p'); hint.className = 'hint'; hint.textContent = '↑ ↓ 選擇 · Esc 關閉';
     menu.append(heading, comparison, reason, choices, actions, hint); root.append(menu);
     menu.addEventListener('keydown', event => {
@@ -160,7 +174,8 @@ export function createController(editor: EditorElement, options: ControllerOptio
     });
     badge.setAttribute('aria-expanded', 'true'); positionMenu(record); menu.querySelector('button')?.focus({ preventScroll: true });
   }
-  function dismiss(record: RecordEdit) {
+  function dismiss(record: RecordEdit, learn = true) {
+    if (learn) feedback(record, record.edit.original, 'keep');
     suppressed.add(signature(record.edit)); records = records.filter(item => item !== record);
     closeMenu(true); idleLabel(); render();
   }
@@ -169,7 +184,7 @@ export function createController(editor: EditorElement, options: ControllerOptio
     if (destroyed) return;
     if (!response.ok) { label(`順字 · ${response.error.message}`); closeMenu(); return; }
     if ('settings' in response) settings = response.settings;
-    if (record.applied) change(record, record.edit.original, true); else dismiss(record);
+    if (record.applied) change(record, record.edit.original, true); else dismiss(record, false);
     label('順字 · 已記住原詞');
   }
 
@@ -189,6 +204,9 @@ export function createController(editor: EditorElement, options: ControllerOptio
     const text = snapshot(editor).text;
     if (!text.trim()) { records = []; suppressed.clear(); closeMenu(); idleLabel(); render(); return; }
     if ([...text].length > MAX_CHARACTERS) { records = []; closeMenu(); label('順字 · 超過 500 字元，略過'); render(); return; }
+    if (checkedSnapshots.has(text)) { idleLabel(); return; }
+    checkedSnapshots.add(text);
+    if (checkedSnapshots.size > 32) checkedSnapshots.delete(checkedSnapshots.values().next().value!);
     const revision = `${Date.now().toString(36)}-${version}`;
     busy = true; label('順字 · 校對中');
     let response: Reply;
@@ -200,10 +218,7 @@ export function createController(editor: EditorElement, options: ControllerOptio
     if (!('response' in response) || response.response.revision !== revision) { idleLabel(); return; }
     if (response.response.status !== 'ok') { label(response.response.status === 'paused' ? '順字 · 已暫停' : '順字 · 這段先保留原文'); return; }
     const proposed = validEdits(response.response.edits, text).filter(edit => !records.some(record => edit.start < record.end && edit.end > record.start));
-    records.push(...proposed.map(edit => ({ edit, start: edit.start, end: edit.end, current: edit.original, applied: false })));
-    for (const record of [...records].sort((a, b) => b.start - a.start)) {
-      if (!record.applied && record.edit.action === 'auto' && document.activeElement === editor) change(record, record.edit.replacement);
-    }
+    records.push(...proposed.map(edit => ({ edit: {...edit, action:'suggest' as const}, start: edit.start, end: edit.end, current: edit.original, applied: false, stale: false, reviewId:response.response.reviewId })));
     records.sort((a, b) => a.start - b.start); lastText = snapshot(editor).text; idleLabel(); render();
   }
   function queue() {
@@ -214,7 +229,8 @@ export function createController(editor: EditorElement, options: ControllerOptio
     if (applying) return;
     const text = snapshot(editor).text;
     if (event instanceof InputEvent && event.inputType === 'historyUndo') {
-      for (const record of records) if (record.applied) suppressed.add(signature(record.edit));
+      for (const record of records) if (record.applied) { suppressed.add(signature(record.edit)); feedback(record, record.edit.original, 'restore'); }
+      checkedSnapshots.add(text);
       records = [];
     } else {
       let start = 0, beforeEnd = lastText.length, afterEnd = text.length;
@@ -222,13 +238,19 @@ export function createController(editor: EditorElement, options: ControllerOptio
       while (beforeEnd > start && afterEnd > start && lastText[beforeEnd - 1] === text[afterEnd - 1]) { beforeEnd--; afterEnd--; }
       const shift = afterEnd - beforeEnd;
       records = records.filter(record => {
+        // Any changed context invalidates an unaccepted semantic suggestion.
+        // An untouched applied span survives solely as a reversible edit.
+        if (text !== lastText) {
+          if (!record.applied) return false;
+          record.stale = true;
+        }
         if (beforeEnd <= record.start) { record.start += shift; record.end += shift; return true; }
         if (start >= record.end) return true;
         if (record.applied && text.includes(record.edit.original)) suppressed.add(signature(record.edit));
         return false;
       });
     }
-    if (!text.trim()) { records = []; suppressed.clear(); }
+    if (!text.trim()) { records = []; suppressed.clear(); checkedSnapshots.clear(); }
     lastText = text; closeMenu(); idleLabel(); render(); queue();
   }
   function compositionStart() { composing = true; clearTimeout(timer); generation++; closeMenu(); marks.replaceChildren(); }
@@ -250,11 +272,13 @@ export function createController(editor: EditorElement, options: ControllerOptio
   async function refreshSettings() {
     const response = await send({ type: 'shunzi:settings' });
     if (destroyed) return;
-    const previous = JSON.stringify([settings.enabled, settings.configured, settings.protectedTerms]);
+    const previous = JSON.stringify([settings.enabled, settings.configured, settings.protectedTerms, settings.profileRevision]);
     if (response.ok && 'settings' in response) settings = response.settings;
     if (!settings.enabled || !settings.configured) { generation++; clearTimeout(timer); records = []; closeMenu(); }
     idleLabel(); render();
-    if (previous !== JSON.stringify([settings.enabled, settings.configured, settings.protectedTerms]) && settings.enabled && settings.configured && snapshot(editor).text.trim()) queue();
+    if (previous !== JSON.stringify([settings.enabled, settings.configured, settings.protectedTerms, settings.profileRevision]) && settings.enabled && settings.configured && snapshot(editor).text.trim()) {
+      checkedSnapshots.clear(); generation++; clearTimeout(timer); records=[]; closeMenu(); queue();
+    }
   }
   editor.addEventListener('input', onInput);
   editor.addEventListener('compositionstart', compositionStart);

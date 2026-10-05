@@ -24,7 +24,7 @@ async function fixture({ textarea = false, auto = false, deferred = false, debou
     w.settings = { mode: 'byok', enabled: true, configured: true, protectedTerms: [] };
     w.reply = (r: any) => {
       const start = r.text.indexOf('連載憶起');
-      return { ok: true, response: { revision: r.revision, status: 'ok', edits: start < 0 ? [] : [{ id: 'fixture-edit', start, end: start + 4, original: '連載憶起', replacement: '連在一起', alternatives: ['接在一起'], category: 'word-boundary', action: auto ? 'auto' : 'suggest', reason: '依上下文，這裡是在說接在一起。' }] } };
+      return { ok: true, response: { revision: r.revision, reviewId:'fixture-review', status: 'ok', edits: start < 0 ? [] : [{ id: 'fixture-edit', start, end: start + 4, original: '連載憶起', replacement: '連在一起', alternatives: ['接在一起'], category: 'word-boundary', action: auto ? 'auto' : 'suggest', reason: '依上下文，這裡是在說接在一起。' }] } };
     };
     w.controller = w.ShunziTest.createController(document.querySelector('#prompt-textarea'), {
       debounceMs,
@@ -129,14 +129,90 @@ test('suggestions apply only on selection, remain marked, restore and stay suppr
   } finally { await page.close(); }
 });
 
-test('native undo suppresses an automatic correction without immediate recorrection', async () => {
+test('auto flags remain suggestions; explicit selection and native undo do not recorrect', async () => {
   const page = await fixture({ auto: true });
   try {
-    await draft(page, '請連載憶起'); await page.waitForFunction(() => document.querySelector('#prompt-textarea')?.textContent === '請連在一起');
+    await draft(page, '請連載憶起'); await mark(page).first().waitFor();
+    assert.equal(await page.locator('#prompt-textarea').textContent(), '請連載憶起');
+    await mark(page).first().click(); await menu(page).getByRole('button', {name:'連在一起',exact:true}).click();
     await page.locator('#prompt-textarea').press('Control+z');
     await page.waitForTimeout(150);
     assert.equal(await page.locator('#prompt-textarea').textContent(), '請連載憶起'); assert.equal(await mark(page).count(), 0);
   } finally { await page.close(); }
+});
+
+test('showing candidates never teaches; choosing, switching and restoring emit explicit feedback', async () => {
+  const page = await fixture();
+  try {
+    await draft(page,'請連載憶起');await mark(page).first().waitFor();await mark(page).first().click();
+    assert.equal(await page.evaluate(()=>(window as any).messages.filter((m:any)=>m.type==='shunzi:feedback').length),0);
+    await menu(page).getByRole('button',{name:'連在一起',exact:true}).click();
+    await mark(page).first().click();await menu(page).getByRole('button',{name:'接在一起',exact:true}).click();
+    assert.equal(await page.locator('#prompt-textarea').textContent(),'請接在一起');
+    await mark(page).first().click();await menu(page).getByRole('button',{name:'還原原文',exact:true}).click();
+    await page.waitForFunction(()=>(window as any).messages.filter((m:any)=>m.type==='shunzi:feedback').length===3);
+    const feedback=await page.evaluate(()=>(window as any).messages.filter((m:any)=>m.type==='shunzi:feedback'));
+    assert.deepEqual(feedback.map((m:any)=>[m.action,m.text]),[['accept','連在一起'],['accept','接在一起'],['restore','連載憶起']]);
+    assert.equal(new Set(feedback.map((m:any)=>m.eventId)).size,3);
+    await draft(page,'請連載憶起');await page.waitForTimeout(100);
+    assert.equal(await page.evaluate(()=>(window as any).requests.length),1);assert.equal(await mark(page).count(),0);
+  } finally {await page.close();}
+});
+
+test('continued context immediately removes unapplied suggestions and only the latest reply returns markers', async () => {
+  const page = await fixture({ deferred:true });
+  try {
+    await page.evaluate(() => {
+      const w = window as any, originalReply = w.reply;
+      w.reply = (request:any) => {
+        const response = originalReply(request);
+        if (request.text.endsWith('，後文也改了')) {
+          response.response.edits[0].replacement = '接在一起';
+          response.response.edits[0].alternatives = [];
+          response.response.edits[0].reason = '最新上下文候選';
+        }
+        return response;
+      };
+    });
+    await draft(page,'請連載憶起');await page.waitForFunction(()=>(window as any).requests.length===1);
+    await page.evaluate(()=>(window as any).releases.shift()());await mark(page).first().waitFor();
+    await mark(page).first().click();
+    await page.evaluate(()=>{(window as any).oldCandidate=document.querySelector('[data-shunzi]')!.shadowRoot!.querySelector('.choices button');});
+    await draft(page,'新的前文：請連載憶起');
+    assert.equal(await mark(page).count(),0);assert.equal(await menu(page).count(),0);
+    // Even a retained reference to the removed menu cannot apply its stale edit.
+    await page.evaluate(()=>(window as any).oldCandidate.click());
+    assert.equal(await page.locator('#prompt-textarea').textContent(),'新的前文：請連載憶起');
+    await page.waitForFunction(()=>(window as any).requests.length===2);
+    await draft(page,'新的前文：請連載憶起，後文也改了');
+    await page.evaluate(()=>(window as any).releases.shift()());
+    await page.waitForFunction(()=>(window as any).requests.length===3);
+    assert.equal(await mark(page).count(),0);
+    await page.evaluate(()=>(window as any).releases.shift()());await mark(page).first().waitFor();
+    await mark(page).first().click();assert.match(await menu(page).innerText(),/最新上下文候選/);
+    assert.equal(await menu(page).getByRole('button',{name:'接在一起',exact:true}).count(),1);
+    assert.equal(await menu(page).getByRole('button',{name:'連在一起',exact:true}).count(),0);
+  } finally {await page.close();}
+});
+
+test('continued context preserves an applied span only for restore, never for old alternatives', async () => {
+  const page = await fixture({ deferred:true });
+  try {
+    await draft(page,'請連載憶起');await page.waitForFunction(()=>(window as any).requests.length===1);
+    await page.evaluate(()=>(window as any).releases.shift()());await mark(page).first().waitFor();
+    await mark(page).first().click();await menu(page).getByRole('button',{name:'連在一起',exact:true}).click();
+    await mark(page).first().click();
+    await page.evaluate(()=>{(window as any).oldAlternative=document.querySelector('[data-shunzi]')!.shadowRoot!.querySelector('.choices button');});
+    await draft(page,'前文：請連在一起');await draft(page,'前文：請連在一起，後文');
+    await page.evaluate(()=>(window as any).oldAlternative.click());
+    assert.equal(await page.locator('#prompt-textarea').textContent(),'前文：請連在一起，後文');
+    await mark(page).first().click();assert.match(await menu(page).innerText(),/上下文已變更/);
+    assert.deepEqual(await menu(page).getByRole('button').allTextContents(),['還原原文']);
+    assert.equal(await menu(page).getByRole('button',{name:'接在一起',exact:true}).count(),0);
+    await menu(page).getByRole('button',{name:'還原原文',exact:true}).click();
+    assert.equal(await page.locator('#prompt-textarea').textContent(),'前文：請連載憶起，後文');
+    assert.equal(await mark(page).count(),0);
+  } finally {await page.close();}
 });
 
 test('candidate keyboard navigation, remember term and Enter leave host sending alone', async () => {
@@ -177,7 +253,20 @@ test('textarea fallback has original-position markers, replacement and native un
   const page = await fixture({ textarea: true });
   try {
     await draft(page, '請連載憶起'); await mark(page).first().waitFor();
-    const editorBounds = await page.locator('#prompt-textarea').boundingBox(), markerBounds = await mark(page).first().boundingBox();
+    // ResizeObserver/scroll rendering replaces markers. Read both live nodes in
+    // one browser turn so a frame cannot detach the marker between measurements.
+    const geometry = await page.waitForFunction(() => {
+      const editor = document.querySelector('#prompt-textarea');
+      const marker = document.querySelector('[data-shunzi]')?.shadowRoot?.querySelector('.marker');
+      if (!editor?.isConnected || !marker?.isConnected) return null;
+      const editorBounds = editor.getBoundingClientRect(), markerBounds = marker.getBoundingClientRect();
+      if (!editorBounds.width || !editorBounds.height || !markerBounds.width || !markerBounds.height) return null;
+      return { editorBounds: editorBounds.toJSON(), markerBounds: markerBounds.toJSON() };
+    });
+    const bounds = await geometry.jsonValue();
+    assert.ok(bounds);
+    const { editorBounds, markerBounds } = bounds;
+    await geometry.dispose();
     assert.ok(editorBounds && markerBounds && markerBounds.x > editorBounds.x && markerBounds.y >= editorBounds.y);
     await mark(page).first().click(); await menu(page).getByRole('button', { name: '連在一起', exact: true }).click();
     assert.equal(await page.locator('#prompt-textarea').inputValue(), '請連在一起');
@@ -229,7 +318,7 @@ test('options needs an explicit saved-key test action, shows estimates and clear
     await page.addScriptTag({ content: result.outputFiles[0].text });
     assert.equal(await page.getByRole('button', { name: '測試連線', exact: true }).isDisabled(), true);
     assert.deepEqual(await page.evaluate(() => (window as any).messages.map((m: any) => m.type)), ['shunzi:settings']);
-    await page.getByLabel('Gemini API 金鑰', { exact: true }).fill('fixture-not-a-real-key');
+    await page.getByLabel('Jev API 金鑰', { exact: true }).fill('fixture-not-a-real-key');
     await page.getByRole('switch', { name: '開啟校對' }).check();
     await page.getByRole('button', { name: '儲存設定', exact: true }).click();
     assert.equal(await page.locator('#credential').inputValue(), '');
@@ -242,6 +331,31 @@ test('options needs an explicit saved-key test action, shows estimates and clear
     assert.equal(await page.getByRole('switch', { name: '開啟校對' }).isChecked(), false);
     assert.equal(await page.getByRole('button', { name: '測試連線', exact: true }).isDisabled(), true);
   } finally { await page.close(); }
+});
+
+test('hosted options show remaining and expired entitlement; demo and status do not trigger semantic API',async()=>{
+  const page=await browser.newPage({viewport:{width:1000,height:900}});
+  try {
+    const html=(await readFile('src/extension/options.html','utf8')).replace('<script type="module" src="options.js"></script>','');
+    await page.setContent(html);await page.addStyleTag({content:await readFile('src/extension/style.css','utf8')});
+    await page.addScriptTag({content:'window.__name = (fn) => fn;'});
+    await page.evaluate(()=>{
+      const w=window as any;w.messages=[];w.settings={mode:'hosted',enabled:true,configured:true,protectedTerms:[],learnedTerms:2,
+        entitlement:{plan:'trial',expiresAt:Date.now()+86400000,remainingChecks:73,limit:100}};
+      w.chrome={runtime:{sendMessage(message:any,callback:(value:any)=>void){w.messages.push(message);
+        if(message.type==='shunzi:clear-profile')w.settings.learnedTerms=0;callback({ok:true,settings:w.settings});}}};
+    });
+    const result=await build({entryPoints:['src/extension/options.ts'],bundle:true,write:false,format:'iife',platform:'browser',define:{__MODE__:'"hosted"'}});
+    await page.addScriptTag({content:result.outputFiles[0].text});
+    assert.equal(await page.locator('#usage-total').innerText(),'剩餘 73 / 100 次');assert.match(await page.locator('#usage-help').innerText(),/台北時間/);
+    await page.locator('#open-demo').click();await page.locator('#demo-choose').click();assert.equal(await page.locator('#demo-text').innerText(),'明天再回覆你。');
+    await page.locator('#demo-restore').click();assert.equal(await page.locator('#demo-text').innerText(),'明天在回覆你。');
+    await page.locator('#clear-profile').click();assert.match(await page.locator('#profile-count').innerText(),/0 個/);
+    await page.evaluate(()=>{(window as any).settings.entitlement.expiresAt=1;});await page.locator('#refresh-status').click();
+    assert.equal(await page.locator('#usage-total').innerText(),'本期已到期');
+    assert.equal(await page.evaluate(()=>(window as any).messages.some((m:any)=>['shunzi:check','shunzi:test-connection'].includes(m.type))),false);
+    await mkdir('.local',{recursive:true});await page.screenshot({path:'.local/hosted-expiry-options.png',fullPage:true});
+  } finally {await page.close();}
 });
 
 async function adapterFixture() {

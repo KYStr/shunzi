@@ -19,7 +19,7 @@ body:
     id: version
     attributes:
       label: 順字版本與模式
-      placeholder: "例如 0.1.0，BYOK；從 ZIP 安裝或原始碼建置"
+      placeholder: "例如 0.2.0，BYOK；從 ZIP 安裝或原始碼建置"
     validations:
       required: true
   - type: input

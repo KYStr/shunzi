@@ -1,0 +1,142 @@
+{
+  "schemaVersion": 1,
+  "version": "0.2.0",
+  "verifiedAt": "2026-10-05T11:40:25.142Z",
+  "model": "jev-1.13.0",
+  "pipelineVersion": "paragraph-phonetic-v2/mcbopomofo-e7bfa5547b92/loose-tones",
+  "frozen": {
+    "frozenAt": "2026-10-05T11:10:01.254Z",
+    "engineSha256": "c2580c5877b6ef4b1fcd863110e8b205c74d5f6c69f5b13d9ce081d18a534fb6",
+    "lexiconSha256": "ac6756d5053980d3014eff14d33bee0cc1b627a0ee6c0500d644be25bf4ba72e",
+    "corpusSha256": "e59c1060778f384357b889bb64357d31853e97f888eb6eb7420896863837f360"
+  },
+  "heldout": {
+    "kind": "synthetic-heldout-or-development-not-human-pilot",
+    "split": "holdout",
+    "live": true,
+    "complete": true,
+    "metrics": {
+      "rows": 200,
+      "errors": 100,
+      "completed": 200,
+      "candidateReachableErrors": 88,
+      "candidateMisses": 12,
+      "selectorMisses": 1,
+      "repairs": 87,
+      "repairRate": 0.87,
+      "preserved": 100,
+      "preservationCases": 100,
+      "falseChanges": 0,
+      "proposedEdits": 90,
+      "validEdits": 87,
+      "suggestedEditPrecision": 0.9666666666666667,
+      "pipelineP95Ms": 323,
+      "costTwd": 0.55302282
+    },
+    "repairGatePassed": true,
+    "automaticEditingEnabled": false
+  },
+  "browserFixtures": [
+    {
+      "edition": "byok",
+      "kind": "actual-edge-mv3-real-jev-local-host-fixture",
+      "notLiveChatGPTSite": true,
+      "requests": 30,
+      "expectedCandidates": 30,
+      "includesDebounceMs": 600,
+      "p95Ms": 1849,
+      "coldFirstMs": 1861
+    },
+    {
+      "edition": "hosted",
+      "kind": "actual-edge-mv3-real-jev-local-host-fixture",
+      "notLiveChatGPTSite": true,
+      "requests": 6,
+      "expectedCandidates": 6,
+      "includesDebounceMs": 600,
+      "p95Ms": 1847,
+      "coldFirstMs": 1847
+    }
+  ],
+  "checks": {
+    "typecheck": "passed",
+    "unit": {
+      "passed": 56,
+      "failed": 0,
+      "skipped": 0
+    },
+    "browser": {
+      "passed": 17,
+      "failed": 0,
+      "skipped": 0
+    },
+    "privateBackend": {
+      "passed": 18,
+      "failed": 0
+    },
+    "reproducibleZipBuilds": 2,
+    "releaseScan": {
+      "passed": true,
+      "sourceAndPackageFiles": 111,
+      "secretMatches": 0
+    },
+    "persistentWindowsEnvironment": {
+      "unchanged": true,
+      "ephemeralPathEntries": 0
+    }
+  },
+  "packageSHA256": {
+    "shunzi-byok-0.2.0.zip": "31742cb258723925524e9246b4f0b9bfd616b77bc206e9f4f6a72b52f2da92bd",
+    "shunzi-hosted-0.2.0.zip": "8aa23f9c7a13481c3a279eb1b3774fb5d1df5f4816194e9b235352eb868f65c8"
+  },
+  "costGate": {
+    "schemaVersion": 1,
+    "model": "jev-1.13.0",
+    "pipelineVersion": "paragraph-phonetic-v2/mcbopomofo-e7bfa5547b92/loose-tones",
+    "maxCallTwd": 0.2,
+    "planChecks": 500,
+    "planEstimateTwd": 100,
+    "passed": false,
+    "reason": "500 requests at the current conservative reserve exceed NT$40; no independently verified lower billing upper bound.",
+    "liveBillingVerified": false,
+    "cases": [
+      {
+        "name": "500-characters-8-groups-6-options",
+        "estimatedTwd": 0.09081807
+      },
+      {
+        "name": "failure-with-unknown-usage",
+        "reservedTwd": 0.2
+      }
+    ],
+    "liveSample": {
+      "inputTokens": 7917,
+      "estimatedTwd": 0.01163799,
+      "latencyMs": 1149,
+      "totalLedgerTwd": 1.6252991600000002
+    },
+    "failureRetainedTwd": 0.2
+  },
+  "budget": {
+    "localEstimatedTwd": 1.62529916,
+    "hostedEstimatedTwd": 0.049244,
+    "combinedEstimatedTwd": 1.67454316,
+    "includesUnknownReservations": true,
+    "providerInvoiceReconciled": false
+  },
+  "demo": {
+    "path": "assets/shunzi-demo.webm",
+    "durationSeconds": 21.32,
+    "actualExtensionAndJev": true,
+    "localFixture": true
+  },
+  "pending": [
+    "Actual ChatGPT browser workflow and voice input",
+    "Owner two-day daily use",
+    "Independent README-only installation",
+    "Five-person seven-day pilot",
+    "Paid cost gate",
+    "Two actual NT$99 payments",
+    "Public GitHub release"
+  ]
+}

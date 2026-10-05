@@ -13,11 +13,15 @@ const extensionPath = resolve('dist/byok');
 
 async function mockWorker(worker: Worker): Promise<void> {
   await worker.evaluate(`globalThis.__lifecycleProviderCalls = 0;
-    globalThis.fetch = async function () {
+    const bundledFetch = globalThis.fetch;
+    globalThis.fetch = async function (url, init) {
+      if (String(url).startsWith('chrome-extension://')) return bundledFetch(url, init);
+      if (String(url) !== 'https://api.typesafe.ai/v1/systemone') throw new Error('unexpected endpoint');
       globalThis.__lifecycleProviderCalls++;
+      const request = JSON.parse(init.body);
       return new Response(JSON.stringify({
-        candidates: [{ finishReason: 'STOP', content: { parts: [{ text: '{"edits":[]}' }] } }],
-        usageMetadata: { promptTokenCount: 20, candidatesTokenCount: 5, thoughtsTokenCount: 0 }
+        model: 'jev-1.13.0', answers: Object.fromEntries(Object.keys(request.questions).map(id => [id, {type:'choice',choice:'keep'}])),
+        usage: {input_tokens:20,output_tokens:0}
       }), { status: 200, headers: { 'content-type': 'application/json' } });
     };`);
 }
@@ -80,7 +84,7 @@ async function assertContentStorageIsolation(context: BrowserContext, extensionI
         const extensionId = chrome.runtime.id;
         const reply = await chrome.runtime.sendMessage({ type: 'shunzi:settings' });
         let denied = false, hasCredential = false, error = '';
-        try { const raw = await chrome.storage.local.get('credential'); hasCredential = typeof raw.credential === 'string'; }
+        try { const raw = await chrome.storage.local.get('jevCredential'); hasCredential = typeof raw.jevCredential === 'string'; }
         catch (failure) { denied = true; error = String(failure); }
         return { extensionId, hasStorageApi: typeof chrome.storage.local.get === 'function', denied, hasCredential, error,
           publicConfigured: reply.ok && reply.settings.configured,
@@ -114,7 +118,7 @@ test('real unpacked MV3 keeps private settings through worker and browser restar
     await live.page.locator('#result').filter({ hasText: '已儲存' }).waitFor();
     await assertConfigured(live.page);
     assert.equal(await live.worker.evaluate('globalThis.__lifecycleProviderCalls'), 0);
-    assert.equal(await live.page.evaluate(async () => (await chrome.storage.local.get('credential')).credential), DUMMY_CREDENTIAL);
+    assert.equal(await live.page.evaluate(async () => (await chrome.storage.local.get('jevCredential')).jevCredential), DUMMY_CREDENTIAL);
     await live.page.screenshot({ path: screenshot, fullPage: true });
 
     // Explicitly stop the real extension service worker, then let a runtime
@@ -165,13 +169,13 @@ test('real unpacked MV3 keeps private settings through worker and browser restar
     await reloadedOptions.locator('#settings-form').waitFor();
     live = { ...live, worker: reloadedWorker, page: reloadedOptions };
     await assertConfigured(live.page);
-    assert.equal(await live.page.evaluate(async () => (await chrome.storage.local.get('credential')).credential), DUMMY_CREDENTIAL);
+    assert.equal(await live.page.evaluate(async () => (await chrome.storage.local.get('jevCredential')).jevCredential), DUMMY_CREDENTIAL);
     await live.page.locator('#clear').click();
     await live.page.locator('#result').filter({ hasText: '已移除' }).waitFor();
     const cleared = await settings(live.page);
     assert.equal(cleared.settings.configured, false);
     assert.equal(cleared.settings.enabled, false);
-    assert.deepEqual(await live.page.evaluate(() => chrome.storage.local.get('credential')), {});
+    assert.deepEqual(await live.page.evaluate(() => chrome.storage.local.get(['credential','jevCredential'])), {});
     assert.equal(await live.worker.evaluate('globalThis.__lifecycleProviderCalls'), 0);
     await live.page.reload();
     assert.equal((await settings(live.page)).settings.configured, false);

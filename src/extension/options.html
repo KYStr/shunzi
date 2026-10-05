@@ -3,7 +3,10 @@
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>順字 · 設定</title><link rel="stylesheet" href="style.css"></head>
 <body>
   <main>
-    <header><span class="eyebrow">把想說的，寫對。</span><h1>順字<span class="dot">。</span></h1><p class="intro">在 ChatGPT 寫完一小段，讓錯字少一點。</p></header>
+    <header><h1>順字<span class="dot">。</span></h1><p class="intro">在 ChatGPT 寫完一小段，讓錯字少一點。</p></header>
+    <div id="onboarding"><p>先儲存連線設定，再開啟校對。寫完停頓後，點底線查看建議，選擇後才修改。</p></div>
+    <button type="button" id="open-demo" class="text-button" aria-expanded="false" aria-controls="demo-panel">先看操作示範 · 不連線、不計次</button>
+    <section id="demo-panel" hidden aria-label="離線操作示範"><h2>試著選一個字</h2><p id="demo-text">明天在回覆你。</p><div class="demo-actions"><button type="button" id="demo-choose" class="secondary">選「再」</button><button type="button" id="demo-keep" class="text-button">保留原文</button><button type="button" id="demo-restore" class="text-button">還原</button></div><p id="demo-state" class="hint" role="status">固定示範，不代表每次校對結果。</p></section>
     <form id="settings-form">
       <section aria-labelledby="connection-heading">
         <div class="section-heading"><h2 id="connection-heading">連線設定</h2><span id="mode-label" class="mode">載入中</span></div>
@@ -14,10 +17,12 @@
         <div class="enable-row"><div><label for="enabled">開啟校對</label><p class="hint">停頓 0.6 秒後檢查，最多 500 字元。</p></div><input type="checkbox" id="enabled" role="switch" aria-label="開啟校對"></div>
       </section>
       <section aria-labelledby="terms-heading"><h2 id="terms-heading">這些詞，保留原樣</h2><p class="description">名字、術語或你慣用的說法。每行一個，最多 30 個詞。</p><label class="sr" for="protected-terms">保護詞，每行一個</label><textarea id="protected-terms" rows="4" maxlength="1860" spellcheck="false" placeholder="例如：專案名稱&#10;你的名字"></textarea><p class="hint">每個詞最多 30 字元，也可以從校對建議選擇「記住原詞」。</p></section>
+      <section aria-labelledby="profile-heading"><div class="section-heading"><h2 id="profile-heading">你的選字偏好</h2><button type="button" class="text-button" id="clear-profile">清除學習偏好</button></div><p id="profile-count" class="hint">已記住 0 個偏好詞</p><p class="hint">只學習你明確選取的詞，保存在本機、不會同步。還原時撤回這次學習。</p></section>
       <section aria-labelledby="usage-heading"><div class="section-heading"><h2 id="usage-heading">本機用量估算</h2><span id="usage-count" class="mode">0 次校對</span></div><p id="usage-total" class="usage-total">約 NT$0.00</p><p id="usage-help" class="hint">這是本機累計估算，不是帳單。未確認的要求會先保留較高估值。</p></section>
-      <div class="form-actions"><button type="submit" class="primary" id="save">儲存設定</button><button type="button" class="secondary" id="test-connection" disabled title="先儲存憑證，再測試連線">測試連線</button><button type="button" class="text-button" id="clear">移除憑證</button><p id="result" role="status" aria-live="polite"></p><p class="hint test-hint">測試只傳送固定範例句，會使用少量 API 額度。新憑證請先儲存。</p></div>
+      <button type="button" id="refresh-status" class="text-button" hidden>重新整理用量 · 不計次</button>
+      <div class="form-actions"><button type="submit" class="primary" id="save">儲存設定</button><button type="button" class="secondary" id="test-connection" disabled title="先儲存憑證，再測試連線">測試連線</button><button type="button" class="text-button" id="clear">移除憑證</button><p id="result" role="status" aria-live="polite"></p><p class="hint test-hint">測試只傳送合成範例與隨機測試代號，會使用 API 額度；託管版成功時扣 1 次。新憑證請先儲存。</p></div>
     </form>
-    <footer><p id="policy-status">目前為建議試驗模式：點選候選後，才會修改文字。</p><p id="privacy">只有草稿文字與保護詞會送往校對服務。順字不讀取對話記錄。</p><p>有建議時，點文字底線或按 <kbd>Alt</kbd> + <kbd>↓</kbd> 查看。隨時可保留原文。</p></footer>
-    <details id="help"><summary>連不上？查看常見問題</summary><dl><dt>金鑰或啟用碼無效（401／403）</dt><dd>確認已儲存正確憑證。自備金鑰需確認 API 權限、支援地區與帳戶設定。</dd><dt>額度不足或請求過多（429）</dt><dd>稍後再試。自備金鑰可至 <a href="https://aistudio.google.com/usage" target="_blank" rel="noopener noreferrer">Google AI Studio 查看用量</a>。</dd><dt>體驗預算已用完（402）</dt><dd>託管版會保留原文並停止校對，需等待管理者補充體驗額度。</dd><dt>模型不支援或連線逾時</dt><dd>確認網路與 API 帳戶可使用套件指定模型。逾時後不會自動重試，下一次輸入再檢查。</dd><dt>為什麼只有建議、沒有直接修改？</dt><dd>目前預設為建議試驗模式。尚未通過實際測試的錯字類型，都先由你確認。</dd><dt>用量數字為什麼與帳單不同？</dt><dd>只計算此裝置的要求；失敗或結果不明的要求採保守估值。重裝或清除擴充資料會重置紀錄，實際費用以供應商帳單為準。</dd></dl></details>
+    <footer><p id="policy-status">建議模式：點選候選後，才會修改文字。AI 仍可能選錯，送出前請檢查。</p><p id="privacy">本機先找候選，有候選才傳送草稿與候選至 Jev。</p><p>不讀取對話記錄，不保存完整草稿。候選快取只短暫存在記憶體；無候選不呼叫 API、不計次。</p><p>有建議時，點文字底線或按 <kbd>Alt</kbd> + <kbd>↓</kbd> 查看。隨時可保留原文。</p></footer>
+    <details id="help"><summary>連不上？查看常見問題</summary><dl><dt>金鑰或啟用碼無效（401／403）</dt><dd>請確認憑證已儲存。舊版 Gemini 金鑰不能用於 Jev；方案到期會顯示到期訊息。</dd><dt>額度不足或請求過多（429）</dt><dd>稍後再試。自備金鑰請至 TypeSafe 帳戶查看 API 額度。</dd><dt>本期次數或服務預算已用完（402）</dt><dd>系統保留原文並停止語意校對。到設定重新整理用量，確認剩餘次數與期限。</dd><dt>連線逾時</dt><dd>請確認網路。逾時不會自動重試；未知費用採保守估值。</dd><dt>為什麼有的句子沒有建議？</dt><dd>沒有本機候選，或 Jev 判斷保留原文時，不會顯示修改。沒有建議不代表完全沒有錯字。</dd><dt>用量數字為什麼與帳單不同？</dt><dd>自備金鑰顯示本機估算，實際費用以 TypeSafe 帳單為準。託管版顯示服務端剩餘次數。</dd></dl></details>
   </main><script type="module" src="options.js"></script>
 </body></html>

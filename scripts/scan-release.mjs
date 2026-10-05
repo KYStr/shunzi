@@ -13,6 +13,11 @@ const patterns = [
 ];
 // Actual in-process credentials are checked by equality too; findings never print the matched secret.
 const secrets = Object.entries(process.env).filter(([k,v]) => /(?:KEY|TOKEN|SECRET)$/.test(k) && v && v.length >= 20).map(([,v])=>v);
+// Local provider formats need not match a known prefix. Compare privately; never print their contents.
+for (const path of ['.local/gemini-api-key.txt','.local/jev-api-key.txt']) {
+  try { const value = (await readFile(path,'utf8')).trim(); if(value.length >= 20) secrets.push(value); }
+  catch(error) { if(error.code !== 'ENOENT') throw new Error('Cannot read local credential for private equality scan'); }
+}
 let files = 0;
 function scan(name, bytes) {
   files++;
@@ -36,7 +41,8 @@ for(const mode of ['byok','hosted']) {
   const hash=createHash('sha256').update(zip).digest('hex');
   if(!sums.includes(`${hash}  ${name}`)) findings.push(`${name}: checksum mismatch`);
   const entries=readZipEntries(zip);
-  const allowed=['background.js','content.js','options.js','options.html','style.css','manifest.json'];
+  const allowed=['background.js','content.js','options.js','options.html','style.css','manifest.json','LICENSE','data/lexicon.json',
+    ...(await readdir('third_party/mcbopomofo-web')).map(n=>`third_party/mcbopomofo-web/${n}`)];
   for(const entry of entries) {
     if(!allowed.includes(entry.name)) findings.push(`${name}/${entry.name}: unexpected packaged file`);
     scan(`${name}/${entry.name}`,entry.bytes);
@@ -44,7 +50,13 @@ for(const mode of ['byok','hosted']) {
   if(allowed.some(x=>!entries.some(e=>e.name===x))) findings.push(`${name}: missing runtime file`);
   const manifest=JSON.parse(entries.find(e=>e.name==='manifest.json').bytes);
   const hosts=manifest.host_permissions;
-  if(mode==='byok' && JSON.stringify(hosts)!==JSON.stringify(['https://generativelanguage.googleapis.com/*'])) findings.push(`${name}: unexpected BYOK hosts`);
+  if(mode==='byok' && JSON.stringify(hosts)!==JSON.stringify(['https://api.typesafe.ai/*'])) findings.push(`${name}: unexpected BYOK hosts`);
+  if(mode==='hosted' && JSON.stringify(hosts)!==JSON.stringify([`${process.env.SHUNZI_HOSTED_ORIGIN || 'https://proof.040141.xyz'}/*`])) findings.push(`${name}: unexpected hosted hosts`);
+  const background=entries.find(e=>e.name==='background.js')?.bytes.toString('utf8') ?? '';
+  if(mode==='byok' && /https:\/\/proof\.040141\.xyz/.test(background)) findings.push(`${name}: BYOK contains hosted endpoint`);
+  for(const notice of entries.filter(e=>e.name.startsWith('third_party/'))) {
+    if(!notice.bytes.equals(await readFile(notice.name))) findings.push(`${name}: notice differs from source`);
+  }
   if(manifest.externally_connectable || manifest.web_accessible_resources) findings.push(`${name}: exposes extension surface to pages`);
 }
 if(findings.length) { console.error(findings.join('\n')); process.exitCode=1; }

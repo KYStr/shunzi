@@ -1,0 +1,71 @@
+{
+  "reviewedAt": "2026-10-05",
+  "component": "McBopomofoWeb derived Han phonetic lexicon",
+  "declaredLicenses": [
+    "MIT (McBopomofoWeb and McBopomofo)",
+    "BSD-3-Clause style notices (libtabe tsi.src; full text retained, surplus trailing blank lines removed)"
+  ],
+  "webRepository": "https://github.com/openvanilla/McBopomofoWeb",
+  "webRevision": "e7bfa5547b92e08265bff2b23ecf0ada832d9270",
+  "sourceFile": "src/McBopomofo/WebData.ts",
+  "sourceSha256": "f4540be733eec5293569f6d968874748b9a9f22d611b2e299b45e143f796fa45",
+  "dataUpdateCommit": "e86a0d6131bcbb483ac38619bbde6bb3ef227133",
+  "declaredDataSourcePR": "https://github.com/openvanilla/McBopomofo/pull/900",
+  "declaredDataSourceHead": "d784d36e8b66cf8198c868e5529c70933a988678",
+  "declaredDataSourceMerge": "4cd2e6f2fc0795fa311e6283ef31f638c0dfed91",
+  "sourceCommitMethod": "Upstream WebData update commit explicitly cites PR 900; not a claim of bit-for-bit regeneration from its data.txt.",
+  "libtabeOfficialHomepage": "https://libtabe.sourceforge.net/",
+  "libtabeArchive": {
+    "url": "https://downloads.sourceforge.net/project/libtabe/libtabe/0.2.3/libtabe-0.2.3.tgz",
+    "sha256": "878917c4c71d8eb21fb349eac25dfae60974608e41ab96ff86621a081d3b5cac",
+    "version": "0.2.3"
+  },
+  "transformation": "TypeScript AST reads source NoSubstitutionTemplateLiteral; JSON.parse; decode absolute-order Bopomofo; retain Han-only entries of 1-8 code points. Upstream source is not executed.",
+  "extractedRows": 171847,
+  "rowsAreNotUniqueWords": true,
+  "distributionRequirements": [
+    "Include both MIT notices and complete libtabe tsi-src/COPYING with source and ZIP distributions.",
+    "Retain provenance and identify dictionary transformation.",
+    "Do not use upstream authors or institutions to endorse this product.",
+    "Do not label the complete derived dictionary MIT-only."
+  ],
+  "historicalLimitations": [
+    "The original libtabe README identifies Chih-Hao Tsai, IOME and Xcin as word-list sources and notes incomplete references for the latter two. Original README and complete distribution notices are retained; this review does not claim a new word-by-word rights audit."
+  ],
+  "notices": [
+    {
+      "path": "LICENSE-McBopomofoWeb-MIT.txt",
+      "source": "https://raw.githubusercontent.com/openvanilla/McBopomofoWeb/e7bfa5547b92e08265bff2b23ecf0ada832d9270/LICENSE.txt",
+      "sha256": "f7535859a29614f35c3f2f8a59ada4615fc5c43b29fe6972334b082e5c33aced"
+    },
+    {
+      "path": "LICENSE-McBopomofo-MIT.txt",
+      "source": "https://raw.githubusercontent.com/openvanilla/McBopomofo/4cd2e6f2fc0795fa311e6283ef31f638c0dfed91/LICENSE.txt",
+      "sha256": "72ed32193b0c629def66df63791b2fb125946b593a3251380e6b949488f47b72"
+    },
+    {
+      "path": "UPSTREAM-WebData-build-README.md",
+      "source": "https://raw.githubusercontent.com/openvanilla/McBopomofoWeb/e7bfa5547b92e08265bff2b23ecf0ada832d9270/tools/README.md",
+      "sha256": "6219c21fd2a08cf5b7c7113ae6af2731a65d776136456ecd2d7ff74f30bdda05"
+    },
+    {
+      "path": "UPSTREAM-McBopomofo-data-README.md",
+      "source": "https://raw.githubusercontent.com/openvanilla/McBopomofo/4cd2e6f2fc0795fa311e6283ef31f638c0dfed91/Source/Data/README.md",
+      "sha256": "4b2eea7122a2a4d8bea7f23f611c6817d681a55d397b1ba3f8100acbfeb9f82e"
+    },
+    {
+      "path": "LICENSE-libtabe-tsi-BSD.txt",
+      "source": "https://downloads.sourceforge.net/project/libtabe/libtabe/0.2.3/libtabe-0.2.3.tgz#libtabe/tsi-src/COPYING",
+      "sha256": "a2d7244a36641b3b52b57ce4bbf5aa8356e6ff8d58a2d04d71e3b4cb2310e6d4",
+      "upstreamSha256": "efe0869f6626da81c78537da381117fe64cfe24ac50d2f2b702d90d6d9a81bd4",
+      "distributionNormalization": "Remove surplus trailing blank lines; full text unchanged."
+    },
+    {
+      "path": "UPSTREAM-libtabe-tsi-README.txt",
+      "source": "https://downloads.sourceforge.net/project/libtabe/libtabe/0.2.3/libtabe-0.2.3.tgz#libtabe/tsi-src/README",
+      "sha256": "603c3320b4d1b91230b8abe601995dbf831db388c03ce170e04036492f0448de",
+      "upstreamSha256": "db1c9d17bfe2067bc028fef3ff71f094747fe51701a8d4e3b2b0376f3067fa55",
+      "distributionNormalization": "Remove surplus trailing blank lines; full text unchanged."
+    }
+  ]
+}

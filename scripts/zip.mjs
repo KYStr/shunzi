@@ -52,7 +52,7 @@ export function readZipEntries(archive) {
     const name = archive.subarray(offset+30,offset+30+nameSize).toString('utf8');
     const start = offset+30+nameSize+extraSize;
     if (method !== 8 || name.includes('..') || name.startsWith('/') || name.includes('\\')) throw new Error('Unsafe ZIP entry');
-    const bytes = inflateRawSync(archive.subarray(start,start+size), { maxOutputLength: 5_000_000 });
+    const bytes = inflateRawSync(archive.subarray(start,start+size), { maxOutputLength: 32_000_000 });
     if (bytes.length !== archive.readUInt32LE(offset+22) || crc32(bytes) !== archive.readUInt32LE(offset+14)) throw new Error('Corrupt ZIP');
     result.push({name,bytes}); offset = start+size;
   }

@@ -1,0 +1,27 @@
+{
+  "name": "@shunzi/core",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "license": "MIT",
+  "description": "繁體中文輸入校對核心與 Chrome/Edge 擴充套件",
+  "exports": { ".": "./dist/core/index.js" },
+  "types": "./dist/core/index.d.ts",
+  "files": ["dist/core", "LICENSE"],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test --test-concurrency=1 tests/*.test.ts",
+    "test:browser": "tsx --test --test-concurrency=1 tests/*.browser.ts",
+    "eval": "tsx scripts/evaluate.ts",
+    "release:scan": "node scripts/scan-release.mjs"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.1.24",
+    "@types/node": "^24.0.0",
+    "esbuild": "^0.25.0",
+    "playwright": "^1.55.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
+  }
+}

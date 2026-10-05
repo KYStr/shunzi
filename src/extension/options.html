@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>順字 · 設定</title><link rel="stylesheet" href="style.css"></head>
+<body>
+  <main>
+    <header><span class="eyebrow">把想說的，寫對。</span><h1>順字<span class="dot">。</span></h1><p class="intro">在 ChatGPT 寫完一小段，讓錯字少一點。</p></header>
+    <form id="settings-form">
+      <section aria-labelledby="connection-heading">
+        <div class="section-heading"><h2 id="connection-heading">連線設定</h2><span id="mode-label" class="mode">載入中</span></div>
+        <p id="connection-help" class="description">文字會在停頓後送出校對。尚未連線時不會傳送。</p>
+        <label for="credential" id="credential-label">連線憑證</label>
+        <div class="credential-field"><input id="credential" name="credential" type="password" autocomplete="off" spellcheck="false" aria-describedby="credential-help" placeholder="貼上即可"><button type="button" id="toggle-secret" aria-label="顯示輸入的憑證" aria-pressed="false">顯示</button></div>
+        <p id="credential-help" class="hint">憑證只儲存在這部裝置，不會同步至其他瀏覽器。</p>
+        <div class="enable-row"><div><label for="enabled">開啟校對</label><p class="hint">停頓 0.6 秒後檢查，最多 500 字元。</p></div><input type="checkbox" id="enabled" role="switch" aria-label="開啟校對"></div>
+      </section>
+      <section aria-labelledby="terms-heading"><h2 id="terms-heading">這些詞，保留原樣</h2><p class="description">名字、術語或你慣用的說法。每行一個，最多 30 個詞。</p><label class="sr" for="protected-terms">保護詞，每行一個</label><textarea id="protected-terms" rows="4" maxlength="1860" spellcheck="false" placeholder="例如：專案名稱&#10;你的名字"></textarea><p class="hint">每個詞最多 30 字元，也可以從校對建議選擇「記住原詞」。</p></section>
+      <section aria-labelledby="usage-heading"><div class="section-heading"><h2 id="usage-heading">本機用量估算</h2><span id="usage-count" class="mode">0 次校對</span></div><p id="usage-total" class="usage-total">約 NT$0.00</p><p id="usage-help" class="hint">這是本機累計估算，不是帳單。未確認的要求會先保留較高估值。</p></section>
+      <div class="form-actions"><button type="submit" class="primary" id="save">儲存設定</button><button type="button" class="secondary" id="test-connection" disabled title="先儲存憑證，再測試連線">測試連線</button><button type="button" class="text-button" id="clear">移除憑證</button><p id="result" role="status" aria-live="polite"></p><p class="hint test-hint">測試只傳送固定範例句，會使用少量 API 額度。新憑證請先儲存。</p></div>
+    </form>
+    <footer><p id="policy-status">目前為建議試驗模式：點選候選後，才會修改文字。</p><p id="privacy">只有草稿文字與保護詞會送往校對服務。順字不讀取對話記錄。</p><p>有建議時，點文字底線或按 <kbd>Alt</kbd> + <kbd>↓</kbd> 查看。隨時可保留原文。</p></footer>
+    <details id="help"><summary>連不上？查看常見問題</summary><dl><dt>金鑰或啟用碼無效（401／403）</dt><dd>確認已儲存正確憑證。自備金鑰需確認 API 權限、支援地區與帳戶設定。</dd><dt>額度不足或請求過多（429）</dt><dd>稍後再試。自備金鑰可至 <a href="https://aistudio.google.com/usage" target="_blank" rel="noopener noreferrer">Google AI Studio 查看用量</a>。</dd><dt>體驗預算已用完（402）</dt><dd>託管版會保留原文並停止校對，需等待管理者補充體驗額度。</dd><dt>模型不支援或連線逾時</dt><dd>確認網路與 API 帳戶可使用套件指定模型。逾時後不會自動重試，下一次輸入再檢查。</dd><dt>為什麼只有建議、沒有直接修改？</dt><dd>目前預設為建議試驗模式。尚未通過實際測試的錯字類型，都先由你確認。</dd><dt>用量數字為什麼與帳單不同？</dt><dd>只計算此裝置的要求；失敗或結果不明的要求採保守估值。重裝或清除擴充資料會重置紀錄，實際費用以供應商帳單為準。</dd></dl></details>
+  </main><script type="module" src="options.js"></script>
+</body></html>

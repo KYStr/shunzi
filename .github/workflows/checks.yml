@@ -1,0 +1,23 @@
+name: Check source and release packages
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.14.0'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npm run release:scan
+      - name: Reproducible packages
+        run: |
+          cp release/SHA256SUMS /tmp/shunzi-first-sums
+          npm run build
+          cmp /tmp/shunzi-first-sums release/SHA256SUMS

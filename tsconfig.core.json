@@ -1,0 +1,8 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false, "declaration": true, "emitDeclarationOnly": true,
+    "outDir": "dist/core", "rootDir": "src/core", "allowImportingTsExtensions": true
+  },
+  "include": ["src/core"], "exclude": ["tests", "scripts"]
+}

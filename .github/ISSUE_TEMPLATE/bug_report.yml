@@ -1,0 +1,64 @@
+name: 問題回報
+description: 回報可重現的安裝、輸入或校對問題，請勿附上憑證及私人草稿。
+title: "[問題] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        請先閱讀 README 的常見問題。GitHub 版採自助支援，不承諾個別協助 API 購買、付款或電腦環境。
+        不要提供 API key、啟用碼、完整私人聊天、內部網址、付款資料或未遮蔽的截圖。
+        如有輸入遺失，先暫停套件，使用人工重寫的短句重現；不要上傳私人原稿。
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: 提交前確認
+      options:
+        - label: 我已閱讀 README／FAQ，並移除憑證及所有私人資訊。
+          required: true
+  - type: input
+    id: version
+    attributes:
+      label: 順字版本與模式
+      placeholder: "例如 0.1.0，BYOK；從 ZIP 安裝或原始碼建置"
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: 瀏覽器與作業系統
+      placeholder: "例如 Chrome 版本號、Windows 11；不要貼整份瀏覽器設定檔"
+    validations:
+      required: true
+  - type: dropdown
+    id: input-method
+    attributes:
+      label: 輸入方式
+      options:
+        - 中文輸入法打字
+        - 語音工具轉成文字
+        - 貼上文字
+        - 安裝或設定問題
+        - 其他
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 最少重現步驟
+      description: 說明從哪個頁面開始、何時停頓或按按鈕；若有錯誤碼，只提供代碼及去識別訊息。
+      placeholder: "1. 開啟 chatgpt.com\n2. 輸入人工範例句\n3. 停頓後……"
+    validations:
+      required: true
+  - type: textarea
+    id: example
+    attributes:
+      label: 人工重寫的原文、預期結果、實際結果
+      description: 不要貼私人真實草稿。無關文字問題可填不適用。
+      placeholder: "原文：我明天在回覆你。\n預期：我明天再回覆你。\n實際：……"
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: 補充資訊（選填）
+      description: 是否每次發生、重新整理後是否恢復、是否超過 500 字元；截圖請完全去識別。

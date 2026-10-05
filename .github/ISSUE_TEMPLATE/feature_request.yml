@@ -1,0 +1,20 @@
+name: 功能建議
+description: 說明你想改善的輸入情境。
+title: "[建議] "
+body:
+  - type: markdown
+    attributes:
+      value: 請只提供去識別的情境，不要放金鑰、啟用碼或私人聊天。本專案不提供個別帳務或電腦設定協助。
+  - type: textarea
+    id: problem
+    attributes:
+      label: 目前遇到什麼困難？
+      description: 用人工重寫的例子描述你正在完成的事情。
+    validations:
+      required: true
+  - type: textarea
+    id: desired
+    attributes:
+      label: 希望怎麼操作、看到什麼結果？
+    validations:
+      required: true

@@ -25,7 +25,7 @@ CLI pipeline P95 323 ms，不是瀏覽器端到端 P95。這次 holdout 估算 N
 
 三張實機 PNG 已由主代理目視檢查，附於 [INSTALL](INSTALL.md)；[影片](assets/shunzi-demo.webm)已產生，實際 **21.32 秒、1120×820**，環境與分鏡見 [DEMO-VIDEO](DEMO-VIDEO.md)。它們均不等於他人自助安裝或真實 ChatGPT 驗收。
 
-完整去識別聚合證據見 [evaluation-report.json](evaluation-report.json)。私有 GitHub 的 `v0.2.0-rc.1` draft 尚在準備，不在此預填建立成功；公開發布仍受真人與產品門檻限制。
+完整去識別聚合證據見 [evaluation-report.json](evaluation-report.json)。`v0.2.0-rc.1` 用作私人候選版標籤；公開發布仍受真人與產品門檻限制。乾淨 Git 原始碼封存（a7cffdb，重用固定詞庫與 lockfile 對應依賴）也重建出逐位元相同的兩個 ZIP。
 
 ## 0.1.0 與初版原型歷史紀錄
 

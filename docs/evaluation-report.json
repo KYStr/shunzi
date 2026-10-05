@@ -83,6 +83,13 @@
     "persistentWindowsEnvironment": {
       "unchanged": true,
       "ephemeralPathEntries": 0
+    },
+    "cleanGitArchiveBuild": {
+      "passed": true,
+      "sourceCommit": "a7cffdb",
+      "pinnedLexiconReused": true,
+      "lockedDependencyInstallationReused": true,
+      "zipBytesIdentical": true
     }
   },
   "packageSHA256": {
